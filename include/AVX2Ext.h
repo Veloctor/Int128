@@ -128,7 +128,7 @@ inline __m256i double_to_int64_fast(const __m256d v) //13 instructions
 //define how many bits is used as fraction in 128bit fixed number, can use as int128 conversion if it's zero
 //will cause a lot of performance overhead if it's not compile-time constant, otherwise zero overhead with any value, not limited in range[0,128]
 #ifndef fixed_frac_bits
-#error "You must define macro fix128_frac_bits as an integer before include AVX2Ext.h!"
+#error "You must define macro fixed_frac_bits as an integer before include AVX2Ext.h!"
 #define fixed_frac_bits 0
 #endif
 // round off to zero(trunc) if this macro is not enabled
