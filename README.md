@@ -6,4 +6,4 @@ There are only four operations: addition, subtraction, conversion from floating 
 
 The operations are highly optimized by a lot of majikal operations
 
-The converted floating-point only supports iee754-binary64 at present
+The converted floating-point only supports ieee754-binary64 at present
