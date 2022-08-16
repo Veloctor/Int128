@@ -175,7 +175,7 @@ struct fixed128
             double upperTrunc = std::floor(div); //maybe trunc better?
             uint64_t targetUpper = static_cast<uint64_t>(div);
             uint64_t targetLower = static_cast<uint64_t>(std::fma(upperTrunc, -ULongMaxValueSD, value));
-            //减法
+            //鍑忔硶
             lower -= lower < targetLower;
             upper -= targetUpper;
             lower -= targetLower;
@@ -187,7 +187,7 @@ struct fixed128
             double upperTrunc = std::floor(div); //maybe trunc better?
             uint64_t targetUpper = static_cast<uint64_t>(div);
             uint64_t targetLower = static_cast<uint64_t>(std::fma(upperTrunc, -ULongMaxValueSD, value));
-            //加法
+            //鍔犳硶
             lower += targetLower;
             upper = upper + targetUpper + (lower < targetLower);
         }
@@ -224,26 +224,7 @@ fixed128 operator-(const fixed128& a, const fixed128& b)
     return res;
 }
 
-double sub_to_double(const fixed128& a, const fixed128& b)
-{
-    //减法
-    uint64_t lower = a.lower - (a.lower < b.lower);
-    uint64_t upper = a.upper - b.upper;
-    lower -= b.lower;
-
-    //如果是负数,则反转
-    if (upper > 0x7FFFFFFFFFFFFFFFu)
-    {
-        uint64_t neglower = (lower ^ (-1LL)) + 1;
-        uint64_t borrow = lower == 0 ? -1LL : 0;
-
-        uint64_t negupper = (upper ^ (-1LL)) - borrow;
-        return std::fma(negupper, -ULongMaxValueSD, -static_cast<double>(neglower));// *TwoP32_InvSD;
-    }
-    else return std::fma(upper, ULongMaxValueSD, lower);// *TwoP32_InvSD;
-}
-
-#define SignMaskPI _mm256_set1_epi64x(LLONG_MIN)
+#define SignMaskPI _mm256_set1_epi64x(LLONG_MIN) //Sign bit mask as packed integer
 
 struct fixed128x4
 {
