@@ -122,20 +122,6 @@ struct fixed128
         lower = _lower;
     }
 
-    explicit fixed128(uint64_t val)
-    {
-        lower = val << fixed_frac_bits;
-        upper = val >> (fixed_frac_bits - 64);
-    }
-
-    explicit fixed128(int64_t val)
-    {
-        int64_t low = val << fixed_frac_bits;
-        int64_t upp = val >> (fixed_frac_bits - 64);
-        lower = *(uint64_t*)&low;
-        upper = *(uint64_t*)&upp;
-    }
-
     fixed128(fixed64 _lower)
     {
         upper = 0;
@@ -176,7 +162,7 @@ struct fixed128
 
     fixed128& operator+=(fixed64 value)
     {
-        upper += _addcarry_u64(0, lower, *(uint64_t*)&value, &lower);
+        upper += _addcarry_u64(0, lower, value, &lower);
         return *this;
     }
 
@@ -283,7 +269,7 @@ struct fixed128x4
     fixed128x4(fixed64 x, fixed64 y, fixed64 z, fixed64 w)
     {
         upper = _mm256_setzero_si256();
-        lower = _mm256_setr_epi64x(x, y, z, w);
+        lower = _mm256_set_epi64x(x, y, z, w);
     }
 
     fixed128x4(fixed64 x)
@@ -298,6 +284,12 @@ struct fixed128x4
         lower = _mm256_set1_epi64x(x.lower);
     }
 
+    fixed128x4(fixed128 x, fixed128 y, fixed128 z, fixed128 w)
+    {
+        upper = _mm256_set_epi64x(x.upper, y.upper, z.upper, w.upper);
+        lower = _mm256_set_epi64x(x.lower, y.lower, z.lower, w.lower);
+    }
+
     fixed128x4(__m256i upper, __m256i lower)
     {
         this->upper = upper;
@@ -307,12 +299,6 @@ struct fixed128x4
     explicit operator __m256d()
     {
         return fixed128_to_double(upper, lower);
-    }
-
-    explicit operator double()
-    {
-        auto result = (__m256d)(*this);
-        return *(double*)&result;
     }
 
     void operator+=(fixed128x4 value)
@@ -360,6 +346,7 @@ fixed128x4 operator-(fixed128x4 a, const fixed128x4& b)
 fixed128x4 gather_3xfix128x4_last_elem_into1(const fixed128x4& in1, const fixed128x4& in2, const fixed128x4& in3)
 {
     fixed128x4 out{};
+    //operations:
     //out.lower.m256i_i64[0] = in1.lower.m256i_i64[3];
     //out.lower.m256i_i64[1] = in2.lower.m256i_i64[3];
     //out.lower.m256i_i64[2] = in3.lower.m256i_i64[3];
@@ -381,6 +368,13 @@ fixed128x4 gather_3xfix128x4_last_elem_into1(const fixed128x4& in1, const fixed1
 
 void distribute_in4xyz_to_3xfix128x4_last_elem(fixed128x4& inout1, fixed128x4& inout2, fixed128x4& inout3, const fixed128x4& in4)
 {
+    //operations:
+    //inout1.lower.m256i_i64[3] = in4.lower.m256i_i64[0];
+    //inout2.lower.m256i_i64[3] = in4.lower.m256i_i64[1];
+    //inout3.lower.m256i_i64[3] = in4.lower.m256i_i64[2];
+    //inout1.upper.m256i_i64[3] = in4.upper.m256i_i64[0];
+    //inout2.upper.m256i_i64[3] = in4.upper.m256i_i64[1];
+    //inout3.upper.m256i_i64[3] = in4.upper.m256i_i64[2];
     auto a = _mm256_permute4x64_epi64(in4.lower, 0);
     inout1.lower = _mm256_blend_epi32(inout1.lower, a, 0b11000000);
     auto b = _mm256_permute4x64_epi64(in4.lower, 0b01000000);
