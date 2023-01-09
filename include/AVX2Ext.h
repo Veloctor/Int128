@@ -131,9 +131,13 @@ inline __m256i double_to_int64_fast(const __m256d v) //13 instructions
 #error "You must define macro fixed_frac_bits as an integer before include AVX2Ext.h!"
 #define fixed_frac_bits 0
 #endif
-// round off to zero(trunc) if this macro is not enabled
-// will increase a little performance trade off
-//#define double_to_fix128_round_to_nearest_up	//r0.4=0, r0.5=1, r1.5=2, r-2.5=-3
+
+/* round to nearest up switch macro:
+ round towards zero(trunc) if this macro is not enabled.
+ chinese: 四舍五入, round example: r(1.49) = 1, r(1.5) = 2, r(2.5) = 3, r(-4.5) = -5, different from ieee754 default "to_nearest_even"!
+ to_nearest_even is not supported.
+ will increase a little performance trade off if enable. */
+//#define double_to_fix128_round_to_nearest_up
 
 //constants
 __m256d majik_d_hm = _mm256_set1_pd(pow(2.0, 100 - fixed_frac_bits) + pow(2.0, 132 - fixed_frac_bits));
