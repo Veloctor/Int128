@@ -132,12 +132,13 @@ inline __m256i double_to_int64_fast(const __m256d v) //13 instructions
 #define fixed_frac_bits 0
 #endif
 
-/* round to nearest up switch macro:
+/* rounding half away from zero switch macro:
  round towards zero(trunc) if this macro is not enabled.
- chinese: 四舍五入, round example: r(1.49) = 1, r(1.5) = 2, r(2.5) = 3, r(-4.5) = -5, different from ieee754 default "to_nearest_even"!
- to_nearest_even is not supported.
+ chinese: 四舍五入, round example: r(1.49) = 1, r(1.5) = 2, r(2.5) = 3, r(-4.5) = -5, different from ieee754 default "half to nearest even"!
+ to nearest even is not supported.
  will increase a little performance trade off if enable. */
-//#define double_to_fix128_round_to_nearest_up
+
+//#define double_to_fix128_half_away_from_zero
 
 //constants
 __m256d majik_d_hm = _mm256_set1_pd(pow(2.0, 100 - fixed_frac_bits) + pow(2.0, 132 - fixed_frac_bits));
@@ -187,14 +188,14 @@ inline __m256d fixed128_to_double(const __m256i& ihigh, const __m256i& ilow)//ma
 //works for full unsigned fixed128 range, otherwise result undefined
 //total latency: 34(round_to_even)_30(trunc), total throughput CPI: 11.2(round_to_even)_10.8(trunc) (references IceLake)
 inline void double_to_ufixed128_full(__m256d v, __m256i& ihigh, __m256i& ilow)
-{//round off: trunc, if you want round to even just denotes macro: double_to_fix128_round_to_even
+{//round off: trunc, if you want round to even just denotes macro: double_to_fix128_half_away_from_zero
 	//constants
 	__m256i mat_mask = _mm256_set1_epi64x(0x0FFFFFFFFFFFFF);	//0_00000000000_1111111111111111111111111111111111111111111111111111
 	__m256i hidden_1 = _mm256_set1_epi64x(0x10000000000000);	//0_00000000001_0000000000000000000000000000000000000000000000000000//you can reduce this constant by add 1 to mat_mask, inc more 1/3 clock throughput
 	__m256i exp_lbias = _mm256_set1_epi64x(1023LL + 52 - fixed_frac_bits);
 	__m256i exp_hbias = _mm256_set1_epi64x(1023LL + 52 + 64 - fixed_frac_bits);
 #define zero256 _mm256_setzero_si256()
-#ifdef double_to_fix128_round_to_nearest_up
+#ifdef double_to_fix128_half_away_from_zero
 	//majik operations											  //Latency, Throughput
 	v = _mm256_add_pd(v, _mm256_set1_pd(0.5));							//4,1/2
 #endif
@@ -229,7 +230,7 @@ inline void double_to_fixed128_full(const __m256d v, __m256i& ihigh, __m256i& il
 	__m256d sign_mask = _mm256_castsi256_pd(_mm256_set1_epi64x(LLONG_MAX));
 #define zero256 _mm256_setzero_si256()
 	//majik operations											  //Latency, Throughput
-#ifdef double_to_fix128_round_to_nearest_up
+#ifdef double_to_fix128_half_away_from_zero
 	__m256d abs = _mm256_and_pd(v, _mm256_castsi256_pd(_mm256_set1_epi64x(LLONG_MAX)));							//1,1/3
 	abs = _mm256_add_pd(abs, _mm256_set1_pd(0.5));						//4,1/2
 	__m256i bin = _mm256_castpd_si256(abs);
@@ -262,32 +263,4 @@ inline void double_to_fixed128_full(const __m256d v, __m256i& ihigh, __m256i& il
 	borrow = _mm256_and_si256(borrow, negative);						//1,1/3
 	ihigh = _mm256_sub_epi64(ihigh, borrow);							//1,1/3
 }
-
-//this doesn't work
-/*
-inline void double_to_fixed128_4part(__m256d v, __m256i& ihigh, __m256i& ilow) // instructions
-{
-#define _mm256_setr_m128i(lo, hi) \
-    _mm256_inserti128_si256(_mm256_castsi128_si256(lo), (hi), 1)
-	//constants
-	__m256d factor_32b = _mm256_set1_pd(pow(2.0, -32));
-	//operations
-	__m128i _00to31 = _mm256_cvtpd_epi32(v);			//7, 1
-	v = _mm256_mul_pd(v, factor_32b);					//4, 0.5
-	__m128i _32to63 = _mm256_cvtpd_epi32(v);			//7, 1
-	__m128i ll = _mm_unpacklo_epi32(_00to31, _32to63);	//1, 0.5
-	__m128i lh = _mm_unpackhi_epi32(_00to31, _32to63);	//1, 0.5
-	ilow = _mm256_setr_m128i(ll, lh);					//3, 1
-	v = _mm256_mul_pd(v, factor_32b);					//4, 0.5
-	__m128i _64to95 = _mm256_cvtpd_epi32(v);			//7, 1
-	v = _mm256_mul_pd(v, factor_32b);					//4, 0.5
-	__m128i _96to127 = _mm256_cvtpd_epi32(v);			//7, 1
-	__m128i hl = _mm_unpacklo_epi32(_64to95, _96to127);	//1, 0.5
-	__m128i hh = _mm_unpackhi_epi32(_64to95, _96to127);	//1, 0.5
-	ihigh = _mm256_setr_m128i(hl, hh);					//3, 1
-	//total latency: 50, total throughput CPI: 9.5
-}
-*/
 #pragma endregion
-//With gcc use -O3, then -fno-associative-math is default. Do not use -Ofast, which enables -fassociative-math!
-//With icc use -fp-model precise
