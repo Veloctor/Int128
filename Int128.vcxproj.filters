@@ -20,10 +20,10 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="include\AVX2Ext.h">
+    <ClInclude Include="include\avx2extension.hpp">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="include\int128.h">
+    <ClInclude Include="include\int128.hpp">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
